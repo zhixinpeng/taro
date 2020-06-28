@@ -1,0 +1,106 @@
+0 silly input [ 'build' ]
+1 silly flags { _: [ 'run' ],
+1 silly flags   'reject-cycles': false,
+1 silly flags   rejectCycles: false,
+1 silly flags   stream: true,
+1 silly flags   scope: '@tarojs/cli',
+1 silly flags   script: 'build',
+1 silly flags   args: [] }
+2 verbose rootPath /Users/huangli/work/github/taro/taro-2.x
+3 info version 2.11.0
+4 silly existsSync /Users/huangli/work/github/taro/taro-2.x/VERSION
+5 info scope @tarojs/cli
+6 silly initialize attempt
+7 silly initialize success
+8 silly execute attempt
+9 silly runScriptInPackageStreaming [ 'build', [], '@tarojs/cli' ]
+10 silly getExecOpts { cwd: '/Users/huangli/work/github/taro/taro-2.x/packages/taro-cli' }
+11 error execute callback with error
+12 error Error: Command failed: npm run build
+12 error npm ERR! code ELIFECYCLE
+12 error npm ERR! errno 2
+12 error npm ERR! @tarojs/cli@1.3.44 prod: `tsc`
+12 error npm ERR! Exit status 2
+12 error npm ERR!
+12 error npm ERR! Failed at the @tarojs/cli@1.3.44 prod script.
+12 error npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+12 error npm WARN Local package.json exists, but node_modules missing, did you mean to install?
+12 error
+12 error npm ERR! A complete log of this run can be found in:
+12 error npm ERR!     /Users/huangli/.npm/_logs/2020-06-11T07_31_36_653Z-debug.log
+12 error ERROR: "prod" exited with 2.
+12 error npm ERR! code ELIFECYCLE
+12 error npm ERR! errno 1
+12 error npm ERR! @tarojs/cli@1.3.44 build: `run-s clean prod`
+12 error npm ERR! Exit status 1
+12 error npm ERR!
+12 error npm ERR! Failed at the @tarojs/cli@1.3.44 build script.
+12 error npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+12 error npm WARN Local package.json exists, but node_modules missing, did you mean to install?
+12 error
+12 error npm ERR! A complete log of this run can be found in:
+12 error npm ERR!     /Users/huangli/.npm/_logs/2020-06-11T07_31_36_691Z-debug.log
+12 error
+12 error
+12 error > @tarojs/cli@1.3.44 build /Users/huangli/work/github/taro/taro-2.x/packages/taro-cli
+12 error > run-s clean prod
+12 error
+12 error
+12 error > @tarojs/cli@1.3.44 clean /Users/huangli/work/github/taro/taro-2.x/packages/taro-cli
+12 error > rimraf dist
+12 error
+12 error
+12 error > @tarojs/cli@1.3.44 prod /Users/huangli/work/github/taro/taro-2.x/packages/taro-cli
+12 error > tsc
+12 error
+12 error src/convertor/index.ts(4,35): error TS2307: Cannot find module '@tarojs/taro'.
+12 error src/convertor/index.ts(9,26): error TS2307: Cannot find module '@tarojs/taroize'.
+12 error src/convertor/index.ts(10,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/convertor/index.ts(12,32): error TS2307: Cannot find module 'postcss-taro-unit-transform'.
+12 error src/create/fetchTemplate.ts(5,25): error TS2307: Cannot find module 'adm-zip'.
+12 error src/create/fetchTemplate.ts(6,27): error TS2307: Cannot find module 'download-git-repo'.
+12 error src/create/init.ts(242,32): error TS2531: Object is possibly 'null'.
+12 error src/create/init.ts(245,29): error TS2531: Object is possibly 'null'.
+12 error src/doctor/configSchema.ts(1,22): error TS2307: Cannot find module 'joi'.
+12 error src/doctor/configValidator.ts(1,22): error TS2307: Cannot find module 'joi'.
+12 error src/doctor/packageValidator.ts(2,27): error TS2307: Cannot find module 'npm-check'.
+12 error src/h5/index.ts(1,28): error TS2307: Cannot find module '@tarojs/taro'.
+12 error src/h5/index.ts(2,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/h5/index.ts(6,22): error TS2307: Cannot find module 'better-babel-generator'.
+12 error src/h5/index.ts(9,23): error TS2307: Cannot find module 'klaw'.
+12 error src/jdreact/convert_to_jdreact.ts(3,23): error TS2307: Cannot find module 'klaw'.
+12 error src/mini/astProcess.ts(9,35): error TS2307: Cannot find module '@tarojs/taro'.
+12 error src/mini/compileScript.ts(4,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/mini/compileStyle.ts(6,30): error TS2307: Cannot find module 'postcss-pxtransform'.
+12 error src/mini/component.ts(4,35): error TS2307: Cannot find module '@tarojs/taro'.
+12 error src/mini/component.ts(5,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/mini/entry.ts(4,27): error TS2307: Cannot find module '@tarojs/taro'.
+12 error src/mini/entry.ts(5,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/mini/helper.ts(5,24): error TS2307: Cannot find module '@tarojs/taro'.
+12 error src/mini/helper.ts(6,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/mini/native.ts(4,35): error TS2307: Cannot find module '@tarojs/taro'.
+12 error src/mini/page.ts(4,35): error TS2307: Cannot find module '@tarojs/taro'.
+12 error src/mini/page.ts(5,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/rn.ts(8,23): error TS2307: Cannot find module 'klaw'.
+12 error src/rn.ts(100,68): error TS2339: Property 'css' does not exist on type 'void | { css: string; filePath: any; }'.
+12 error   Property 'css' does not exist on type 'void'.
+12 error src/rn.ts(100,88): error TS2339: Property 'filePath' does not exist on type 'void | { css: string; filePath: any; }'.
+12 error   Property 'filePath' does not exist on type 'void'.
+12 error src/rn.ts(102,65): error TS2339: Property 'filePath' does not exist on type 'void | { css: string; filePath: any; }'.
+12 error   Property 'filePath' does not exist on type 'void'.
+12 error src/rn/styleProcess.ts(5,30): error TS2307: Cannot find module 'postcss-pxtransform'.
+12 error src/rn/styleProcess.ts(6,26): error TS2307: Cannot find module 'taro-css-to-react-native'.
+12 error src/rn/StyleSheet/ImageResizeMode.ts(13,28): error TS2307: Cannot find module 'fbjs/lib/keyMirror'.
+12 error src/rn/StyleSheet/StyleSheetValidation.ts(15,28): error TS2307: Cannot find module 'fbjs/lib/invariant'.
+12 error src/rn/transformJS.ts(7,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/ui/common.ts(5,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/ui/h5.ts(4,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/ui/mini.ts(6,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/ui/quickapp.ts(6,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/ui/rn.ts(6,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error src/util/astConvert.ts(2,22): error TS2307: Cannot find module 'better-babel-generator'.
+12 error src/util/hash.ts(4,22): error TS2307: Cannot find module 'xxhashjs'.
+12 error src/util/index.ts(13,36): error TS2307: Cannot find module 'find-yarn-workspace-root'.
+12 error src/util/resolve_npm_files.ts(4,32): error TS2307: Cannot find module '@tarojs/transformer-wx'.
+12 error
+12 error     at Promise.all.then.arr (/Users/huangli/work/github/taro/taro-2.x/node_modules/lerna/node_modules/execa/index.js:236:11)
