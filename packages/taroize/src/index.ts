@@ -9,10 +9,11 @@ interface Option {
   json?: string,
   script?: string,
   wxml?: string,
-  path: string
+  path: string,
   rootPath: string,
-  framework: 'react' | 'vue'
-  isApp?: boolean
+  framework: 'react' | 'vue',
+  isApp?: boolean,
+  filePath?: string
 }
 
 export function parse (option: Option) {
@@ -31,19 +32,19 @@ export function parse (option: Option) {
   }
 
   if (option.framework === 'vue') {
-    const result = parseVue(option.path, option.wxml || '', option.script)
+    const result = parseVue(option.path, option.wxml || '', option.script, option.filePath)
     return {
       ...result,
       errors
     }
   }
-
-  const { wxml, wxses, imports, refIds } = parseWXML(option.path, option.wxml)
+  const { wxml, wxses, imports, refIds, errorslog } = parseWXML(option.path, option.wxml, undefined, option.filePath)
   setting.sourceCode = option.script!
-  const ast = parseScript(option.script, wxml as t.Expression, wxses, refIds, option.isApp)
+  const ast = parseScript(option.script, wxml as t.Expression, wxses, refIds, option.isApp, option.filePath)
   return {
     ast,
     imports,
-    errors
+    errors,
+    errorslog
   }
 }

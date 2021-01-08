@@ -4,7 +4,7 @@ import { buildRender, buildBlockElement, pascalName, setting } from './utils'
 import { resolve, relative, extname, dirname } from 'path'
 import * as fs from 'fs'
 import { parseWXML, createWxmlVistor } from './wxml'
-import { errors } from './global'
+import { errors, logCollector } from './global'
 
 function isNumeric (n) {
   return !isNaN(parseFloat(n)) && isFinite(n)
@@ -30,7 +30,7 @@ export function buildTemplateName (name: string, pascal = true): string {
   return str.join('')
 }
 
-export function parseTemplate (path: NodePath<t.JSXElement>, dirPath: string) {
+export function parseTemplate (path: NodePath<t.JSXElement>, dirPath: string, filePath) {
   if (!path.container) {
     return
   }
@@ -46,11 +46,14 @@ export function parseTemplate (path: NodePath<t.JSXElement>, dirPath: string) {
   if (name) {
     const value = name.node.value
     if (value === null || !t.isStringLiteral(value)) {
-      throw new Error('template 的 `name` 属性只能是字符串')
+      logCollector(filePath, 'template 的 `name` 属性只能是字符串', 1, '需求调整成字符串')
+      // throw new Error('template 的 `name` 属性只能是字符串')
+      console.log('template 的 `name` 属性只能是字符串')
+      return
     }
     const className = buildTemplateName(value.value)
 
-    path.traverse(createWxmlVistor(loopIds, refIds, dirPath, [], imports))
+    path.traverse(createWxmlVistor(loopIds, refIds, dirPath, [], imports, filePath))
     const firstId = Array.from(refIds)[0]
     refIds.forEach(id => {
       if (loopIds.has(id) && id !== firstId) {
@@ -85,6 +88,7 @@ export function parseTemplate (path: NodePath<t.JSXElement>, dirPath: string) {
   } else if (is) {
     const value = is.node.value
     if (!value) {
+      logCollector(filePath, 'template 的 `is` 属性不能为空')
       throw new Error('template 的 `is` 属性不能为空')
     }
     if (t.isStringLiteral(value)) {
@@ -115,6 +119,7 @@ export function parseTemplate (path: NodePath<t.JSXElement>, dirPath: string) {
       } else if (t.isConditional(value.expression)) {
         const { test, consequent, alternate } = value.expression
         if (!t.isStringLiteral(consequent) || !t.isStringLiteral(alternate)) {
+          logCollector(filePath, '当 template is 标签是三元表达式时，他的两个值都必须为字符串', 1, '调整成字符串的形式')
           throw new Error('当 template is 标签是三元表达式时，他的两个值都必须为字符串')
         }
         const attributes: t.JSXAttribute[] = []
@@ -147,24 +152,27 @@ export function parseTemplate (path: NodePath<t.JSXElement>, dirPath: string) {
     return
   }
 
+  logCollector(filePath, 'template 标签必须指名 `is` 或 `name` 任意一个标签', 1, '增加一个标签')
   throw new Error('template 标签必须指名 `is` 或 `name` 任意一个标签')
 }
 
-export function getWXMLsource (dirPath: string, src: string, type: string) {
+export function getWXMLsource (dirPath: string, src: string, type: string, filePath: string) {
   try {
     const file = fs.readFileSync(resolve(dirPath, src), 'utf-8')
     return file
   } catch (e) {
+    logCollector(filePath, `找不到这个路径的 wxml: <${type} src="${src}" />，该标签将会被忽略掉`, 1, '查看该路径的文件是否存在')
     errors.push(`找不到这个路径的 wxml: <${type} src="${src}" />，该标签将会被忽略掉`)
     return ''
   }
 }
 
-export function parseModule (jsx: NodePath<t.JSXElement>, dirPath: string, type: 'include' | 'import') {
+export function parseModule (jsx: NodePath<t.JSXElement>, dirPath: string, type: 'include' | 'import', filePath: string) {
   const openingElement = jsx.get('openingElement')
   const attrs = openingElement.get('attributes')
   const src = attrs.find(attr => attr.get('name').isJSXIdentifier({ name: 'src' }))
   if (!src) {
+    logCollector(filePath, `${type} 标签必须包含 \`src\` 属性`, 1, '请添加 src 属性')
     throw new Error(`${type} 标签必须包含 \`src\` 属性`)
   }
   if (extname(dirPath)) {
@@ -172,12 +180,14 @@ export function parseModule (jsx: NodePath<t.JSXElement>, dirPath: string, type:
   }
   const value = src.get('value')
   if (!value.isStringLiteral()) {
+    logCollector(filePath, `${type} 标签的 src 属性值必须是一个字符串`, 1, '请将 src 属性改成字符串的形式')
     throw new Error(`${type} 标签的 src 属性值必须是一个字符串`)
   }
   let srcValue = value.node.value
   if (srcValue.startsWith('/')) {
     const vpath = resolve(setting.rootPath, srcValue.substr(1))
     if (!fs.existsSync(vpath)) {
+      logCollector(filePath, `import/include 的 src 请填入相对路径再进行转换：src="${srcValue}"`, 1, '请将 src 改成相对路径的形式')
       throw new Error(`import/include 的 src 请填入相对路径再进行转换：src="${srcValue}"`)
     }
     let relativePath = relative(dirPath, vpath)
@@ -188,7 +198,7 @@ export function parseModule (jsx: NodePath<t.JSXElement>, dirPath: string, type:
     srcValue = relativePath
   }
   if (type === 'import') {
-    const wxml = getWXMLsource(dirPath, srcValue, type)
+    const wxml = getWXMLsource(dirPath, srcValue, type, filePath)
     const { imports } = parseWXML(resolve(dirPath, srcValue), wxml, true)
     try {
       jsx.remove()
@@ -197,11 +207,12 @@ export function parseModule (jsx: NodePath<t.JSXElement>, dirPath: string, type:
     }
     return imports
   } else {
-    const wxmlStr = getWXMLsource(dirPath, srcValue, type)
+    const wxmlStr = getWXMLsource(dirPath, srcValue, type, filePath)
     const block = buildBlockElement()
     if (wxmlStr === '') {
       if (jsx.node.children.length) {
         // tslint:disable-next-line: no-console
+        logCollector(filePath, `标签: <include src="${srcValue}"> 没有自动关闭。形如：<include src="${srcValue}" /> 才是标准的 wxml 格式。`, 1, '改成 wxml 标准格式')
         console.error(`标签: <include src="${srcValue}"> 没有自动关闭。形如：<include src="${srcValue}" /> 才是标准的 wxml 格式。`)
       }
       jsx.remove()

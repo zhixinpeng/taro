@@ -145,7 +145,7 @@ export function codeFrameError (node, msg: string) {
   } catch (error) {
     errMsg = 'failed to locate source'
   }
-  return new Error(`${msg}
+  return (`${msg}
   -----
   ${errMsg}`)
 }

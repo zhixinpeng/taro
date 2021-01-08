@@ -6,10 +6,12 @@ import traverse, { NodePath, Visitor } from 'babel-traverse'
 import { buildTemplate, DEFAULT_Component_SET, buildImportStatement, buildBlockElement, parseCode, codeFrameError, isValidVarName } from './utils'
 import { specialEvents } from './events'
 import { parseTemplate, parseModule } from './template'
-import { usedComponents, errors, globals, THIRD_PARTY_COMPONENTS } from './global'
+import { usedComponents, errors, globals, THIRD_PARTY_COMPONENTS, logCollector, getCollector } from './global'
 import { reserveKeyWords } from './constant'
 import { parse as parseFile } from 'babylon'
 import { getCacheWxml, saveCacheWxml } from './cache'
+import { printLog, processTypeEnum } from '@tarojs/helper'
+
 const { prettyPrint } = require('html')
 
 const allCamelCase = (str: string) =>
@@ -77,6 +79,8 @@ export interface Wxml {
   wxml?: t.Node
   imports: Imports[]
   refIds: Set<string>
+  errors?: string[]
+  errorslog?: Map<string, Array<string>>
 }
 
 export const WX_IF = 'wx:if'
@@ -115,7 +119,8 @@ export const createWxmlVistor = (
   refIds: Set<string>,
   dirPath: string,
   wxses: WXS[] = [],
-  imports: Imports[] = []
+  imports: Imports[] = [],
+  filePath
 ) => {
   const jsxAttrVisitor = (path: NodePath<t.JSXAttribute>) => {
     const name = path.node.name as t.JSXIdentifier
@@ -135,7 +140,7 @@ export const createWxmlVistor = (
 
     const valueCopy = cloneDeep(path.get('value').node)
     transformIf(name.name, path, jsx, valueCopy)
-    const loopItem = transformLoop(name.name, path, jsx, valueCopy)
+    const loopItem = transformLoop(name.name, path, jsx, valueCopy, filePath)
     if (loopItem) {
       if (loopItem.index && !refIds.has(loopItem.index)) {
         loopIds.add(loopItem.index)
@@ -156,6 +161,7 @@ export const createWxmlVistor = (
         // eslint-disable-next-line no-console
         console.log(`未知 wx 作用域属性： ${nodeName}，该属性会被移除掉。`)
         path.parentPath.remove()
+        logCollector(filePath as any, `未知 wx 作用域属性： ${nodeName}，该属性会被移除掉。`, 1, '需要运行后查看是否有影响')
       }
     }
   }
@@ -209,7 +215,8 @@ export const createWxmlVistor = (
               path.remove()
             }
           } else {
-            throw codeFrameError(slotValue, 'slot 的值必须是一个字符串')
+            logCollector(filePath || dirPath, `${slotValue} 里 slot 的值必须是一个字符串`, 1, '检查修改即可')
+            codeFrameError(slotValue, 'slot 的值必须是一个字符串')
           }
         }
         const tagName = jsxName.node.name
@@ -220,7 +227,8 @@ export const createWxmlVistor = (
             if (nameAttr.node.value && t.isStringLiteral(nameAttr.node.value)) {
               slotName = nameAttr.node.value.value
             } else {
-              throw codeFrameError(jsxName.node, 'slot 的值必须是一个字符串')
+              printLog(processTypeEnum.ERROR, codeFrameError(jsxName.node, 'slot 的值必须是一个字符串'), filePath)
+              logCollector(filePath || dirPath, 'slot 的值必须是一个字符串', 1, '检查修改即可')
             }
           }
           const children = t.memberExpression(
@@ -234,13 +242,13 @@ export const createWxmlVistor = (
           }
         }
         if (tagName === 'Wxs') {
-          wxses.push(getWXS(attrs.map(a => a.node), path, imports))
+          wxses.push(getWXS(attrs.map(a => a.node), path, imports, filePath))
         }
         if (tagName === 'Template') {
           // path.traverse({
           //   JSXAttribute: jsxAttrVisitor
           // })
-          const template = parseTemplate(path, dirPath)
+          const template = parseTemplate(path, dirPath, filePath)
           if (template) {
             const { ast: classDecl, name } = template
             const taroComponentsImport = buildImportStatement('@tarojs/components', [
@@ -285,13 +293,13 @@ export const createWxmlVistor = (
           }
         }
         if (tagName === 'Import') {
-          const mods = parseModule(path, dirPath, 'import')
+          const mods = parseModule(path, dirPath, 'import', filePath as any)
           if (mods) {
             imports.push(...mods)
           }
         }
         if (tagName === 'Include') {
-          parseModule(path, dirPath, 'include')
+          parseModule(path, dirPath, 'include', filePath as any)
         }
       },
       exit (path: NodePath<t.JSXElement>) {
@@ -316,7 +324,8 @@ export const createWxmlVistor = (
   } as Visitor
 }
 
-export function parseWXML (dirPath: string, wxml?: string, parseImport?: boolean): Wxml {
+export function parseWXML (dirPath: string, wxml?: string, parseImport?: boolean, filePath?): Wxml {
+  filePath = filePath + '.wxml'
   let parseResult = getCacheWxml(dirPath)
   if (parseResult) {
     return parseResult
@@ -352,31 +361,34 @@ export function parseWXML (dirPath: string, wxml?: string, parseImport?: boolean
     t.program(
       [
         t.expressionStatement(parseNode(
-          buildElement('block', nodes as Node[])
+          buildElement('block', nodes as Node[]),
+          filePath
         ) as t.Expression)
       ],
       []
     )
   )
 
-  traverse(ast, createWxmlVistor(loopIds, refIds, dirPath, wxses, imports))
+  traverse(ast, createWxmlVistor(loopIds, refIds, dirPath, wxses, imports, filePath))
 
   refIds.forEach(id => {
     if (loopIds.has(id) || imports.filter(i => i.wxs).map(i => i.name).includes(id)) {
       refIds.delete(id)
     }
   })
+  const tempErrorslog = getCollector(filePath) ? new Map([[filePath, getCollector(filePath)]]) : new Map()
   parseResult = {
     wxses,
     imports,
     wxml: hydrate(ast),
-    refIds
+    refIds,
+    errorslog: tempErrorslog
   }
   saveCacheWxml(dirPath, parseResult)
   return parseResult
 }
 
-function getWXS (attrs: t.JSXAttribute[], path: NodePath<t.JSXElement>, imports: Imports[]): WXS {
+function getWXS (attrs: t.JSXAttribute[], path: NodePath<t.JSXElement>, imports: Imports[], filePath: string): WXS {
   let moduleName: string | null = null
   let src: string | null = null
 
@@ -386,6 +398,7 @@ function getWXS (attrs: t.JSXAttribute[], path: NodePath<t.JSXElement>, imports:
       const attrValue = attr.value
       let value: string | null = null
       if (attrValue === null) {
+        logCollector(filePath, 'WXS 标签的属性值不得为空', 1, '给该属性设置默认值')
         throw new Error('WXS 标签的属性值不得为空')
       }
       if (t.isStringLiteral(attrValue)) {
@@ -408,6 +421,7 @@ function getWXS (attrs: t.JSXAttribute[], path: NodePath<t.JSXElement>, imports:
   if (!src) {
     const { children: [script] } = path.node
     if (!t.isJSXText(script)) {
+      logCollector(filePath, 'wxs 如果没有 src 属性，标签内部必须有 wxs 代码。', 1, '添加 src 属性')
       throw new Error('wxs 如果没有 src 属性，标签内部必须有 wxs 代码。')
     }
     src = './wxs__' + moduleName
@@ -415,6 +429,7 @@ function getWXS (attrs: t.JSXAttribute[], path: NodePath<t.JSXElement>, imports:
     traverse(ast, {
       CallExpression (path) {
         if (t.isIdentifier(path.node.callee, { name: 'getRegExp' })) {
+          logCollector(filePath, '请使用 JavaScript 标准正则表达式把这个 getRegExp 函数重构。', 1, '需要重构该函数')
           console.warn(codeFrameError(path.node, '请使用 JavaScript 标准正则表达式把这个 getRegExp 函数重构。'))
         }
       }
@@ -427,6 +442,7 @@ function getWXS (attrs: t.JSXAttribute[], path: NodePath<t.JSXElement>, imports:
   }
 
   if (!moduleName || !src) {
+    logCollector(filePath, '一个 WXS 需要同时存在两个属性：`wxs`, `src`', 1, '去除其中一个属性')
     throw new Error('一个 WXS 需要同时存在两个属性：`wxs`, `src`')
   }
 
@@ -457,7 +473,8 @@ function transformLoop (
   name: string,
   attr: NodePath<t.JSXAttribute>,
   jsx: NodePath<t.JSXElement>,
-  value: AttrValue
+  value: AttrValue,
+  filePath: string
 ) {
   const jsxElement = jsx.get('openingElement')
   if (!jsxElement.node) {
@@ -468,6 +485,7 @@ function transformLoop (
   const hasSinglewxForItem = wxForItem && wxForItem.value && t.isJSXExpressionContainer(wxForItem.value)
   if (hasSinglewxForItem || name === WX_FOR || name === 'wx:for-items') {
     if (!value || !t.isJSXExpressionContainer(value)) {
+      logCollector(filePath, 'wx:for 的值必须使用 "{{}}"  包裹', 1, '必须使用 "{{}}"  包裹')
       throw new Error('wx:for 的值必须使用 "{{}}"  包裹')
     }
     attr.remove()
@@ -480,6 +498,7 @@ function transformLoop (
         const node = p.node
         if (node.name.name === WX_FOR_ITEM) {
           if (!node.value || !t.isStringLiteral(node.value)) {
+            logCollector(filePath, WX_FOR_ITEM + ' 的值必须是一个字符串', 1, '修改成字符串')
             throw new Error(WX_FOR_ITEM + ' 的值必须是一个字符串')
           }
           item = node.value
@@ -487,6 +506,7 @@ function transformLoop (
         }
         if (node.name.name === WX_FOR_INDEX) {
           if (!node.value || !t.isStringLiteral(node.value)) {
+            logCollector(filePath, WX_FOR_INDEX + ' 的值必须是一个字符串', 1, '修改成字符串')
             throw new Error(WX_FOR_INDEX + ' 的值必须是一个字符串')
           }
           index = node.value
@@ -662,7 +682,7 @@ function findWXIfProps (
   return matches
 }
 
-function parseNode (node: AllKindNode, tagName?: string) {
+function parseNode (node: AllKindNode, tagName?: string, filePath?) {
   if (node.type === NodeType.Text) {
     return parseText(node, tagName)
   } else if (node.type === NodeType.Comment) {
@@ -673,10 +693,10 @@ function parseNode (node: AllKindNode, tagName?: string) {
     }] as any[]
     return t.jSXExpressionContainer(emptyStatement)
   }
-  return parseElement(node)
+  return parseElement(node, filePath)
 }
 
-function parseElement (element: Element): t.JSXElement {
+function parseElement (element: Element, filePath: string): t.JSXElement {
   const tagName = t.jSXIdentifier(THIRD_PARTY_COMPONENTS.has(element.tagName) ? element.tagName : allCamelCase(element.tagName))
   if (DEFAULT_Component_SET.has(tagName.name)) {
     usedComponents.add(tagName.name)
@@ -720,7 +740,7 @@ function parseElement (element: Element): t.JSXElement {
     }
   }
   return t.jSXElement(
-    t.jSXOpeningElement(tagName, attributes.map(parseAttribute)),
+    t.jSXOpeningElement(tagName, attributes.map(item => parseAttribute(item, filePath))),
     t.jSXClosingElement(tagName),
     removEmptyTextAndComment(element.children).map((el) => parseNode(el, element.tagName)),
     false
@@ -789,7 +809,7 @@ export function parseContent (content: string, single = false): { type: 'raw' | 
   }
 }
 
-function parseAttribute (attr: Attribute) {
+function parseAttribute (attr: Attribute, filePath?: string) {
   let { key, value } = attr
   let jsxValue: null | t.JSXExpressionContainer | t.StringLiteral = null
   if (value) {
@@ -797,6 +817,7 @@ function parseAttribute (attr: Attribute) {
       value = value.slice(1, value.length - 1).replace(',', '')
       // eslint-disable-next-line no-console
       console.log(codeFrameError(attr, 'Taro/React 不支持 class 传入数组，此写法可能无法得到正确的 class'))
+      logCollector(filePath as any, 'Taro/React 不支持 class 传入数组，此写法可能无法得到正确的 class')
     }
     const { type, content } = parseContent(value)
 
@@ -813,6 +834,7 @@ function parseAttribute (attr: Attribute) {
           if (key === WX_KEY) {
             expr = t.stringLiteral('')
           } else {
+            logCollector(filePath as any, err, 3)
             throw new Error(err)
           }
         } else if (content.includes(':') || (content.includes('...') && content.includes(','))) {
@@ -820,6 +842,7 @@ function parseAttribute (attr: Attribute) {
           expr = file.program.body[0].declarations[0].init
         } else {
           const err = `转换模板参数： \`${key}: ${value}\` 报错`
+          logCollector(filePath as any, err, 5, '需要检查参数')
           throw new Error(err)
         }
       }
@@ -857,7 +880,7 @@ function parseAttribute (attr: Attribute) {
   return t.jSXAttribute(t.jSXIdentifier(jsxKey), jsxValue)
 }
 
-function handleAttrKey (key: string) {
+function handleAttrKey (key: string, filePath?: string) {
   if (
     key.startsWith('wx:') ||
     key.startsWith('wx-') ||
@@ -873,6 +896,7 @@ function handleAttrKey (key: string) {
       key = key.replace(/^(bind:|catch:|bind|catch)/, 'on')
       key = camelCase(key)
       if (!isValidVarName(key)) {
+        logCollector(filePath as any, `"${key}" 不是一个有效 JavaScript 变量名`, 2, '需要修改变量名')
         throw new Error(`"${key}" 不是一个有效 JavaScript 变量名`)
       }
       return key.substr(0, 2) + key[2].toUpperCase() + key.substr(3)

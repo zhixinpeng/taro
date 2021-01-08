@@ -2,7 +2,7 @@ import * as t from 'babel-types'
 import traverse, { NodePath, Visitor } from 'babel-traverse'
 import { buildImportStatement, codeFrameError, buildRender, buildBlockElement, parseCode } from './utils'
 import { WXS } from './wxml'
-import { usedComponents } from './global'
+import { usedComponents, logCollector } from './global'
 
 const defaultClassName = '_C'
 
@@ -39,8 +39,10 @@ export function parseScript (
   returned?: t.Expression,
   wxses: WXS[] = [],
   refId?: Set<string>,
-  isApp = false
+  isApp = false,
+  filePath?: string
 ) {
+  filePath = filePath + '.js'
   script = script || 'Page({})'
   if (t.isJSXText(returned as any)) {
     const block = buildBlockElement()
@@ -76,7 +78,8 @@ export function parseScript (
           componentType,
           refId,
           wxses,
-          isApp
+          isApp,
+          filePath
         )
         ast.program.body.push(
           classDecl,
@@ -122,8 +125,10 @@ function parsePage (
   componentType?: string,
   refId?: Set<string>,
   wxses?: WXS[],
-  isApp = false
+  isApp = false,
+  filePath?: string
 ) {
+  filePath = filePath + '.js'
   const stateKeys: string[] = []
   pagePath.traverse({
     CallExpression (path) {
@@ -146,6 +151,7 @@ function parsePage (
   if (arg.isObjectExpression() || arg.isIdentifier()) {
     //
   } else {
+    logCollector(filePath as any, `${componentType || '组件'} 的第一个参数必须是一个对象或变量才能转换。`, 1, '请将组件的第一个参数改成一个对象或变量')
     throw codeFrameError(arg.node, `${componentType || '组件'} 的第一个参数必须是一个对象或变量才能转换。`)
   }
 
