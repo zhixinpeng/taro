@@ -9,7 +9,6 @@ import * as taroize from '@tarojs/taroize'
 import wxTransformer from '@tarojs/transformer-wx'
 import * as postcss from 'postcss'
 import * as unitTransform from 'postcss-taro-unit-transform'
-import { IPluginContext } from '@tarojs/service'
 // import * as inquirer from 'inquirer'
 
 import {
@@ -30,8 +29,6 @@ import Creator from '../create/creator'
 import babylonConfig from '../config/babylon'
 import { analyzeImportUrl, incrementId } from './helper'
 import { getPkgVersion } from '../util'
-import { string } from '@hapi/joi'
-import convert from 'src/presets/commands/convert'
 
 const template = require('babel-template')
 
@@ -1016,8 +1013,8 @@ ${code}
   }
 }
 
-export function getConvertReport (ctx: IPluginContext): IErrorCollector {
-  const convertor = new Convertor(ctx.paths.appPath)
+export function getConvertReport (appPath: string): IErrorCollector {
+  const convertor = new Convertor(appPath)
   convertor.run()
   return convertor.getError()
 }
