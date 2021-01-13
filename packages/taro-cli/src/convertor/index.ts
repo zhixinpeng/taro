@@ -27,7 +27,7 @@ import {
 import { generateMinimalEscapeCode } from '../util/astConvert'
 import Creator from '../create/creator'
 import babylonConfig from '../config/babylon'
-import { analyzeImportUrl, incrementId } from './helper'
+import { analyzeImportUrl, incrementId, bannedFeature } from './helper'
 import { getPkgVersion } from '../util'
 
 const template = require('babel-template')
@@ -585,7 +585,11 @@ ${code}
       const jsCode = generateMinimalEscapeCode(ast)
       this.writeFileToTaro(entryDistJSPath, jsCode)
       this.writeFileToConfig(entryDistJSPath, entryJSON)
-      this.printLog(processTypeEnum.GENERATE, '入口文件', this.generateShowPath(entryDistJSPath))
+      const url = this.generateShowPath(entryDistJSPath)
+      this.printLog(processTypeEnum.GENERATE, '入口文件', url)
+      if (process.env.CONVERT_ENV === 'getError') {
+        this.getRuntimeError('app', ast, url)
+      }
       if (this.entryStyle) {
         this.traverseStyle(this.entryStylePath, this.entryStyle)
       }
@@ -597,6 +601,62 @@ ${code}
     } catch (err) {
       console.log(err)
     }
+  }
+
+  private getRuntimeError (type, ast, url) {
+    let bannedProperties: any[] = []
+    let bannedMethods: any[] = []
+    if (type === 'app') {
+      bannedProperties = [...bannedProperties, ...bannedFeature.app]
+    } else if (type === 'page') {
+      bannedMethods = [...bannedMethods, ...bannedFeature.page]
+    } else if (type === 'component') {
+      bannedProperties = [...bannedProperties, ...bannedFeature.component]
+    }
+    traverse(ast, {
+      CallExpression: path => {
+        const { callee, arguments: args } = path.node
+        if (t.isIdentifier(callee) && callee.name === 'withWeapp' && t.isObjectExpression(args[0])) {
+          const properties = args[0].properties
+          properties.forEach(prop => {
+            if (!t.isSpreadProperty(prop) && t.isIdentifier(prop.key)) {
+              const name = prop.key.name
+              bannedProperties.some(item => {
+                if (name !== item.name) return
+
+                this.setErrorCollector(
+                  processTypeEnum.ERROR,
+                  url,
+                  item.message,
+                  item.recoverTime,
+                  item.tips
+                )
+                return true
+              })
+            }
+          })
+        } else if (t.isIdentifier(callee) || t.isMemberExpression(callee)) {
+          let name = ''
+          if (t.isIdentifier(callee)) {
+            name = callee.name
+          } else if (t.isIdentifier(callee.property)) {
+            name = callee.property.name
+          }
+          bannedMethods.some(item => {
+            if (item.name !== name) return
+
+            this.setErrorCollector(
+              processTypeEnum.ERROR,
+              url,
+              item.message,
+              item.recoverTime,
+              item.tips
+            )
+            return true
+          })
+        }
+      }
+    })
   }
 
   generateTabBarIcon (tabBar: TabBar) {
@@ -736,7 +796,11 @@ ${code}
         const jsCode = generateMinimalEscapeCode(ast)
         this.writeFileToTaro(this.getComponentDest(pageDistJSPath), this.formatFile(jsCode, taroizeResult.template))
         this.writeFileToConfig(pageDistJSPath, param.json)
-        this.printLog(processTypeEnum.GENERATE, '页面文件', this.generateShowPath(pageDistJSPath))
+        const url = this.generateShowPath(pageDistJSPath)
+        this.printLog(processTypeEnum.GENERATE, '页面文件', url)
+        if (process.env.CONVERT_ENV === 'getError') {
+          this.getRuntimeError('page', ast, url)
+        }
         if (pageStyle) {
           this.traverseStyle(pageStylePath, pageStyle)
         }
@@ -824,7 +888,11 @@ ${code}
         })
         const jsCode = generateMinimalEscapeCode(ast)
         this.writeFileToTaro(this.getComponentDest(componentDistJSPath), this.formatFile(jsCode, taroizeResult.template))
-        this.printLog(processTypeEnum.GENERATE, '组件文件', this.generateShowPath(componentDistJSPath))
+        const url = this.generateShowPath(componentDistJSPath)
+        this.printLog(processTypeEnum.GENERATE, '组件文件', url)
+        if (process.env.CONVERT_ENV === 'getError') {
+          this.getRuntimeError('component', ast, url)
+        }
         if (componentStyle) {
           this.traverseStyle(componentStylePath, componentStyle)
         }
@@ -1016,5 +1084,6 @@ ${code}
 export function getConvertReport (appPath: string): IErrorCollector {
   const convertor = new Convertor(appPath)
   convertor.run()
+  process.env.CONVERT_ENV = 'getError'
   return convertor.getError()
 }

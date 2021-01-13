@@ -103,3 +103,58 @@ export const incrementId = () => {
   let n = 0
   return () => (n++).toString()
 }
+
+export const bannedFeature = {
+  app: [{
+    name: 'onError',
+    message: '不支持使用 App 的 onError 方法',
+    recoverTime: 60,
+    tips: '请使用 React 的 Error Boundaries(https://reactjs.org/docs/error-boundaries.html)'
+  }, {
+    name: 'onPageNotFound',
+    message: '不支持使用 App 的 onPageNotFound 方法'
+  }, {
+    name: 'onUnhandledRejection',
+    message: '不支持使用 App 的 onUnhandledRejection 方法'
+  }, {
+    name: 'onThemeChange',
+    message: '不支持使用 App 的 onThemeChange 方法'
+    }],
+  page: [{
+    name: 'selectComponent',
+    message: '不支持使用 Page 的 selectComponent 方法',
+    recoverTime: 20,
+    tips: '请使用 React 的 ref(https://reactjs.org/docs/refs-and-the-dom.html)'
+  }, {
+    name: 'selectAllComponents',
+    message: '不支持使用 Page 的 selectAllComponents 方法',
+    recoverTime: 20,
+    tips: '请使用 React 的 ref(https://reactjs.org/docs/refs-and-the-dom.html)'
+  }, {
+    name: 'selectOwnerComponent',
+    message: '不支持使用 Page 的 selectOwnerComponent 方法',
+    recoverTime: 20,
+    tips: '请使用 React 的 ref(https://reactjs.org/docs/refs-and-the-dom.html)'
+  }, {
+    name: 'groupSetData',
+    message: '不支持使用 Page 的 groupSetData 方法'
+  }],
+  component: [{
+    name: 'moved',
+    message: '不支持使用 Component 的 moved 方法'
+  }, {
+    name: 'externalClasses',
+    message: '不支持使用 Component 的 externalClasses 方法',
+    recoverTime: 30,
+    tips: 'Taro 3 不存在自定义组件，建议规范类名或使用 CSS Module 代替'
+  }, {
+    name: 'relations',
+    message: '不支持使用 Component 的 relations 方法'
+  }, {
+    name: 'options',
+    message: '不支持使用 Component 的 options 方法'
+  }, {
+    name: 'definitionFilter',
+    message: '不支持使用 Component 的 definitionFilter 方法'
+  }]
+}
