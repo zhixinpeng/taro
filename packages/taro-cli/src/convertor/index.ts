@@ -29,6 +29,7 @@ import Creator from '../create/creator'
 import babylonConfig from '../config/babylon'
 import { analyzeImportUrl, incrementId, bannedFeature } from './helper'
 import { getPkgVersion } from '../util'
+import { isIdentifier } from 'babel-types'
 
 const template = require('babel-template')
 
@@ -495,7 +496,11 @@ export default class Convertor {
         })
         const jsCode = generateMinimalEscapeCode(ast)
         this.writeFileToTaro(outputFilePath, prettier.format(jsCode, prettierJSConfig))
-        this.printLog(processTypeEnum.COPY, 'JS 文件', this.generateShowPath(outputFilePath))
+        const url = this.generateShowPath(outputFilePath)
+        this.printLog(processTypeEnum.COPY, 'JS 文件', url)
+        if (process.env.CONVERT_ENV === 'getError') {
+          this.getRuntimeError('script', ast, url)
+        }
         this.hadBeenCopyedFiles.add(file)
         this.generateScriptFiles(scriptFiles)
       })
@@ -613,11 +618,33 @@ ${code}
     } else if (type === 'component') {
       bannedProperties = [...bannedProperties, ...bannedFeature.component]
     }
+
+    const checkImportFrom = (node: t.ExportAllDeclaration | t.ExportNamedDeclaration) => {
+      if (node.source) {
+        this.setErrorCollector(
+          processTypeEnum.ERROR,
+          url,
+          bannedFeature.importFrom.message,
+          bannedFeature.importFrom.recoverTime,
+          bannedFeature.importFrom.tips
+        )
+      }
+    }
+
     traverse(ast, {
       CallExpression: path => {
         const { callee, arguments: args } = path.node
         if (t.isIdentifier(callee) && callee.name === 'withWeapp' && t.isObjectExpression(args[0])) {
           const properties = args[0].properties
+          if (properties.length === 0) {
+            this.setErrorCollector(
+              processTypeEnum.ERROR,
+              url,
+              bannedFeature.baseClass.message,
+              bannedFeature.baseClass.recoverTime,
+              bannedFeature.baseClass.tips
+            )
+          }
           properties.forEach(prop => {
             if (!t.isSpreadProperty(prop) && t.isIdentifier(prop.key)) {
               const name = prop.key.name
@@ -639,6 +666,16 @@ ${code}
           let name = ''
           if (t.isIdentifier(callee)) {
             name = callee.name
+            if (name === 'Page' || name === 'Component') {
+              this.setErrorCollector(
+                processTypeEnum.ERROR,
+                url,
+                bannedFeature.uselessConstructor.message,
+                bannedFeature.uselessConstructor.recoverTime,
+                bannedFeature.uselessConstructor.tips
+              )
+              return
+            }
           } else if (t.isIdentifier(callee.property)) {
             name = callee.property.name
           }
@@ -655,6 +692,30 @@ ${code}
             return true
           })
         }
+      },
+      MemberExpression: ({ node }) => {
+        if (
+          (isIdentifier(node.property) && node.property.name === 'exports') ||
+          (isIdentifier(node.object) && node.object.name === 'exports')
+        ) {
+          traverse(ast, {
+            ImportDeclaration: () => {
+              this.setErrorCollector(
+                processTypeEnum.ERROR,
+                url,
+                bannedFeature.esWithCommonjs.message,
+                bannedFeature.esWithCommonjs.recoverTime,
+                bannedFeature.esWithCommonjs.tips
+              )
+            }
+          })
+        }
+      },
+      ExportAllDeclaration: ({ node }) => {
+        checkImportFrom(node)
+      },
+      ExportNamedDeclaration: ({ node }) => {
+        checkImportFrom(node)
       }
     })
   }

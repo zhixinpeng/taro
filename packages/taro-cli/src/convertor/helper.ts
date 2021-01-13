@@ -119,7 +119,7 @@ export const bannedFeature = {
   }, {
     name: 'onThemeChange',
     message: '不支持使用 App 的 onThemeChange 方法'
-    }],
+  }],
   page: [{
     name: 'selectComponent',
     message: '不支持使用 Page 的 selectComponent 方法',
@@ -156,5 +156,25 @@ export const bannedFeature = {
   }, {
     name: 'definitionFilter',
     message: '不支持使用 Component 的 definitionFilter 方法'
-  }]
+  }],
+  baseClass: {
+    message: '装饰器 withWeapp 的参数是空对象',
+    recoverTime: 10,
+    tips: '请检查是否使用了基类去构造 Page 或 Component，这种情况需要手动处理：https://taro-docs.jd.com/taro/docs/taroize-troubleshooting#1-%E6%B2%A1%E6%9C%89%E5%A4%84%E7%90%86%E5%9F%BA%E7%B1%BB'
+  },
+  uselessConstructor: {
+    message: '请不要调用 Page 或 Component 构造器',
+    recoverTime: 10,
+    tips: '请检查是否使用了基类去构造 Page 或 Component，这种情况需要手动处理：https://taro-docs.jd.com/taro/docs/taroize-troubleshooting#1-%E6%B2%A1%E6%9C%89%E5%A4%84%E7%90%86%E5%9F%BA%E7%B1%BB'
+  },
+  esWithCommonjs: {
+    message: '请不要混用 ES Modules 和 CommonJS',
+    recoverTime: 10,
+    tips: '详情请见：https://taro-docs.jd.com/taro/docs/taroize-troubleshooting#3-commonjs-%E5%92%8C-es-%E6%A8%A1%E5%9D%97%E5%8C%96%E8%AF%AD%E6%B3%95%E4%B8%8D%E8%83%BD%E6%B7%B7%E7%94%A8'
+  },
+  importFrom: {
+    message: '暂时不支持使用 import from 语法',
+    recoverTime: 20,
+    tips: '请手动修复'
+  }
 }
