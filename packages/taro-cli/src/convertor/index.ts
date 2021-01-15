@@ -109,11 +109,6 @@ interface IErrorCollector {
   error: Map<string, Array<IError>>
 }
 
-const errorCollector: IErrorCollector = {
-  success: new Set(),
-  error: new Map()
-}
-
 export default class Convertor {
   root: string
   convertRoot: string
@@ -132,6 +127,7 @@ export default class Convertor {
   entryStyle: string
   entryUsingComponents: Record<string, string>
   framework: 'react' | 'vue'
+  errorCollector: IErrorCollector
 
   constructor (root) {
     this.root = root
@@ -149,6 +145,10 @@ export default class Convertor {
     this.hadBeenCopyedFiles = new Set<string>()
     this.hadBeenBuiltComponents = new Set<string>()
     this.hadBeenBuiltImports = new Set<string>()
+    this.errorCollector = {
+      success: new Set(),
+      error: new Map()
+    }
     this.init()
   }
 
@@ -173,14 +173,14 @@ export default class Convertor {
 
   setErrorCollector (type: string, url: string, msg: string, time: number, msgDetail?: string) {
     if (type === 'convert' || type === 'copy') {
-      errorCollector.success.add(url)
+      this.errorCollector.success.add(url)
     } else if (type === 'error') {
-      if (errorCollector.error.has(url)) {
-        const _error: Array<IError> = errorCollector.error.get(url) || []
+      if (this.errorCollector.error.has(url)) {
+        const _error: Array<IError> = this.errorCollector.error.get(url) || []
         _error.push({ msg, time, msgDetail })
-        errorCollector.error.set(url, _error)
+        this.errorCollector.error.set(url, _error)
       } else {
-        errorCollector.error.set(url, [{ msg, time, msgDetail }])
+        this.errorCollector.error.set(url, [{ msg, time, msgDetail }])
       }
     }
   }
@@ -576,7 +576,7 @@ ${code}
         isApp: true
       })
       if (taroizeResult.errorslog) {
-        errorCollector.error = new Map([...errorCollector.error, ...taroizeResult.errorslog])
+        this.errorCollector.error = new Map([...this.errorCollector.error, ...taroizeResult.errorslog])
       }
       const { ast, scriptFiles } = this.parseAst({
         ast: taroizeResult.ast,
@@ -844,7 +844,7 @@ ${code}
           framework: this.framework
         })
         if (taroizeResult.errorslog) {
-          errorCollector.error = new Map([...errorCollector.error, ...taroizeResult.errorslog])
+          this.errorCollector.error = new Map([...this.errorCollector.error, ...taroizeResult.errorslog])
         }
         const { ast, scriptFiles } = this.parseAst({
           ast: taroizeResult.ast,
@@ -930,7 +930,7 @@ ${code}
           framework: this.framework
         })
         if (taroizeResult.errorslog) {
-          errorCollector.error = new Map([...errorCollector.error, ...taroizeResult.errorslog])
+          this.errorCollector.error = new Map([...this.errorCollector.error, ...taroizeResult.errorslog])
         }
         let componentStyle: string | null = null
         if (fs.existsSync(componentStylePath)) {
@@ -1036,7 +1036,7 @@ ${code}
     }
   }
 
-  generateConfigFiles () {
+  async generateConfigFiles () {
     const creator = new Creator()
     const templateName = 'default'
     const configDir = path.join(this.convertRoot, 'config')
@@ -1082,28 +1082,33 @@ ${code}
       framework: this.framework
     })
     creator.template(templateName, path.join('src', 'index.html'), path.join(this.convertDir, 'index.html'))
-    creator.fs.commit(() => {
-      const pkgObj = JSON.parse(fs.readFileSync(pkgPath).toString())
-      pkgObj.dependencies['@tarojs/with-weapp'] = `^${version}`
-      fs.writeJSONSync(pkgPath, pkgObj, {
-        spaces: 2,
-        EOL: '\n'
-      })
-      this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(configDir, 'index.js')))
-      this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(configDir, 'dev.js')))
-      this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(configDir, 'prod.js')))
-      this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(pkgPath))
-      this.printLog(
-        processTypeEnum.GENERATE,
-        '文件',
-        this.generateShowPath(path.join(this.convertRoot, 'project.config.json'))
-      )
-      this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(this.convertRoot, '.gitignore')))
-      this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(this.convertRoot, '.editorconfig')))
-      this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(this.convertRoot, '.eslintrc')))
-      this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(this.convertDir, 'index.html')))
-      this.showLog()
-    })
+    await new Promise(
+      (resolve) => {
+        creator.fs.commit(() => {
+          const pkgObj = JSON.parse(fs.readFileSync(pkgPath).toString())
+          pkgObj.dependencies['@tarojs/with-weapp'] = `^${version}`
+          fs.writeJSONSync(pkgPath, pkgObj, {
+            spaces: 2,
+            EOL: '\n'
+          })
+          this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(configDir, 'index.js')))
+          this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(configDir, 'dev.js')))
+          this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(configDir, 'prod.js')))
+          this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(pkgPath))
+          this.printLog(
+            processTypeEnum.GENERATE,
+            '文件',
+            this.generateShowPath(path.join(this.convertRoot, 'project.config.json'))
+          )
+          this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(this.convertRoot, '.gitignore')))
+          this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(this.convertRoot, '.editorconfig')))
+          this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(this.convertRoot, '.eslintrc')))
+          this.printLog(processTypeEnum.GENERATE, '文件', this.generateShowPath(path.join(this.convertDir, 'index.html')))
+          this.showLog()
+          resolve()
+        })
+      }
+    )
   }
 
   showLog () {
@@ -1116,9 +1121,7 @@ ${code}
   }
 
   getError () {
-    // console.log()
-    // console.log(`--start--${JSON.stringify(errorCollector)}--end--`)
-    return errorCollector
+    return this.errorCollector
   }
 
   printLog (type, msg: string, url: string, time = 1, msgDetail?: string) {
@@ -1126,7 +1129,7 @@ ${code}
     this.setErrorCollector(type, url, msg, time, msgDetail)
   }
 
-  run () {
+  async run () {
     // inquirer.prompt([{
     //   type: 'list',
     //   name: 'framework',
@@ -1137,14 +1140,14 @@ ${code}
     this.framework = 'react'
     this.generateEntry()
     this.traversePages()
-    this.generateConfigFiles()
+    await this.generateConfigFiles()
     // })
   }
 }
 
-export function getConvertReport (appPath: string): IErrorCollector {
+export async function getConvertReport (appPath: string) {
   const convertor = new Convertor(appPath)
-  convertor.run()
   process.env.CONVERT_ENV = 'getError'
+  await convertor.run()
   return convertor.getError()
 }

@@ -41,4 +41,8 @@ export const getCollector = (url: string) => {
   return logs.get(url)
 }
 
+export const resetLogCollector = () => {
+  logs.clear()
+}
+
 export const THIRD_PARTY_COMPONENTS = new Set<string>()

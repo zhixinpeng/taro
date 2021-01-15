@@ -1,7 +1,7 @@
 import * as t from 'babel-types'
 import { parseWXML } from './wxml'
 import { parseScript } from './script'
-import { errors, resetGlobals, THIRD_PARTY_COMPONENTS } from './global'
+import { errors, resetGlobals, THIRD_PARTY_COMPONENTS, resetLogCollector } from './global'
 import { setting } from './utils'
 import { parseVue } from './vue'
 
@@ -18,6 +18,7 @@ interface Option {
 
 export function parse (option: Option) {
   resetGlobals()
+  resetLogCollector()
   setting.rootPath = option.rootPath
   if (option.json) {
     const config = JSON.parse(option.json)

@@ -109,7 +109,7 @@ export const bannedFeature = {
     name: 'onError',
     message: '不支持使用 App 的 onError 方法',
     recoverTime: 60,
-    tips: '请使用 React 的 Error Boundaries(https://reactjs.org/docs/error-boundaries.html)'
+    tips: '请使用 React 的 Error Boundaries 详情请见：https://reactjs.org/docs/error-boundaries.html'
   }, {
     name: 'onPageNotFound',
     message: '不支持使用 App 的 onPageNotFound 方法'
@@ -124,17 +124,17 @@ export const bannedFeature = {
     name: 'selectComponent',
     message: '不支持使用 Page 的 selectComponent 方法',
     recoverTime: 20,
-    tips: '请使用 React 的 ref(https://reactjs.org/docs/refs-and-the-dom.html)'
+    tips: '请使用 React 的 ref 详情请见：https://reactjs.org/docs/refs-and-the-dom.html'
   }, {
     name: 'selectAllComponents',
     message: '不支持使用 Page 的 selectAllComponents 方法',
     recoverTime: 20,
-    tips: '请使用 React 的 ref(https://reactjs.org/docs/refs-and-the-dom.html)'
+    tips: '请使用 React 的 ref 详情请见：https://reactjs.org/docs/refs-and-the-dom.html'
   }, {
     name: 'selectOwnerComponent',
     message: '不支持使用 Page 的 selectOwnerComponent 方法',
     recoverTime: 20,
-    tips: '请使用 React 的 ref(https://reactjs.org/docs/refs-and-the-dom.html)'
+    tips: '请使用 React 的 ref 详情请见：https://reactjs.org/docs/refs-and-the-dom.html'
   }, {
     name: 'groupSetData',
     message: '不支持使用 Page 的 groupSetData 方法'
@@ -160,12 +160,12 @@ export const bannedFeature = {
   baseClass: {
     message: '装饰器 withWeapp 的参数是空对象',
     recoverTime: 10,
-    tips: '请检查是否使用了基类去构造 Page 或 Component，这种情况需要手动处理：https://taro-docs.jd.com/taro/docs/taroize-troubleshooting#1-%E6%B2%A1%E6%9C%89%E5%A4%84%E7%90%86%E5%9F%BA%E7%B1%BB'
+    tips: '请检查是否使用了基类去构造 Page 或 Component，这种情况需要手动处理，详情请见：https://taro-docs.jd.com/taro/docs/taroize-troubleshooting#1-%E6%B2%A1%E6%9C%89%E5%A4%84%E7%90%86%E5%9F%BA%E7%B1%BB'
   },
   uselessConstructor: {
     message: '请不要调用 Page 或 Component 构造器',
     recoverTime: 10,
-    tips: '请检查是否使用了基类去构造 Page 或 Component，这种情况需要手动处理：https://taro-docs.jd.com/taro/docs/taroize-troubleshooting#1-%E6%B2%A1%E6%9C%89%E5%A4%84%E7%90%86%E5%9F%BA%E7%B1%BB'
+    tips: '请检查是否使用了基类去构造 Page 或 Component，这种情况需要手动处理，详情请见：https://taro-docs.jd.com/taro/docs/taroize-troubleshooting#1-%E6%B2%A1%E6%9C%89%E5%A4%84%E7%90%86%E5%9F%BA%E7%B1%BB'
   },
   esWithCommonjs: {
     message: '请不要混用 ES Modules 和 CommonJS',

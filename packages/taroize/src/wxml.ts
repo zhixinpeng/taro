@@ -161,7 +161,6 @@ export const createWxmlVistor = (
         // eslint-disable-next-line no-console
         console.log(`未知 wx 作用域属性： ${nodeName}，该属性会被移除掉。`)
         path.parentPath.remove()
-        logCollector(filePath as any, `未知 wx 作用域属性： ${nodeName}，该属性会被移除掉。`, 1, '需要运行后查看是否有影响')
       }
     }
   }
